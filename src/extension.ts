@@ -17,12 +17,18 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 class PhpUseFoldingProvider implements vscode.FoldingRangeProvider {
-    provideFoldingRanges(
+    async provideFoldingRanges(
         document: vscode.TextDocument,
         context: vscode.FoldingContext,
         token: vscode.CancellationToken
-    ): vscode.FoldingRange[] {
-        const foldingRanges: vscode.FoldingRange[] = [];
+    ): Promise<vscode.FoldingRange[]> {
+        // Get default folding ranges from other providers (like Intelephense)
+        const existingRanges = await vscode.commands.executeCommand<vscode.FoldingRange[]>(
+            'vscode.executeFoldingRangeProvider',
+            document.uri
+        ) || [];
+
+        const customRanges: vscode.FoldingRange[] = [];
         let startLine: number | null = null;
 
         for (let i = 0; i < document.lineCount; i++) {
@@ -33,14 +39,16 @@ class PhpUseFoldingProvider implements vscode.FoldingRangeProvider {
             }
 
             if (startLine !== null && (line === "" || i === document.lineCount - 1)) {
-                foldingRanges.push(new vscode.FoldingRange(startLine, i - 1));
-                return foldingRanges;
+                customRanges.push(new vscode.FoldingRange(startLine, i - 1));
+                startLine = null;
             }
         }
 
-        return foldingRanges;
+        // Combine existing folding ranges with our custom ones
+        return [...existingRanges, ...customRanges];
     }
 }
+
 
 function foldUseStatements(editor: vscode.TextEditor) {
     const document = editor.document;
