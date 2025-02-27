@@ -89,8 +89,7 @@ function foldUseStatements(editor: vscode.TextEditor) {
     }
 
     if (startLine !== null && endLine !== null) {
-        editor.selection = new vscode.Selection(startLine, 0, endLine, 0);
-        vscode.commands.executeCommand('editor.fold');
+        vscode.commands.executeCommand('editor.fold', { levels: 1, selectionLines: [startLine] });
     }
 }
 
