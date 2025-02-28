@@ -5,12 +5,34 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.languages.registerFoldingRangeProvider('php', new PhpUseFoldingProvider());
 
+    const timeoutHandles = new Map<string, NodeJS.Timeout>();
+
     context.subscriptions.push(
         vscode.workspace.onDidOpenTextDocument((document) => {
             if (document.languageId === 'php') {
-                vscode.window.showTextDocument(document).then((editor) => {
-                    foldUseStatements(editor);
-                });
+                const documentUri = document.uri.toString();
+
+                // Set a timeout to fold use statements after 100ms
+                const handle = setTimeout(() => {
+                    vscode.window.visibleTextEditors.forEach(editor => {
+                        if (editor.document.uri.toString() === documentUri) {
+                            foldUseStatements(editor);
+                        }
+                    });
+                    timeoutHandles.delete(documentUri);
+                }, 100);
+
+                timeoutHandles.set(documentUri, handle);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.workspace.onDidCloseTextDocument((document) => {
+            const documentUri = document.uri.toString();
+            if (timeoutHandles.has(documentUri)) {
+                clearTimeout(timeoutHandles.get(documentUri));
+                timeoutHandles.delete(documentUri);
             }
         })
     );
